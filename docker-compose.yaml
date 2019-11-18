@@ -1,14 +1,14 @@
 version: '3'
 services:
-  kvs-socket-server-http:
+  server:
     build: .
     ports:
       - "5000:5000"
     depends_on:
-      - redis
+      - redis_meow
 
-  redis:
-    container_name: redis
+  redis_meow:
+    container_name: redis_meow
     image: redis
     ports:
       - "6379:6379"

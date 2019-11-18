@@ -11,8 +11,10 @@ import pymongo
 
 
 app = flask.Flask(__name__)
-cache = redis.Redis(host = 'redis')
-db = pymongo.MongoClient(host = '0.0.0.0')['csc']
+cache = redis.Redis(host = 'redis_meow')
+client = pymongo.MongoClient(host = '0.0.0.0')
+database = client['csc']
+db = database['csc']
 
 
 def validate_request(action, key, message):
