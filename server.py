@@ -27,40 +27,46 @@ def validate_request(action, key, message):
     return True
 
 
-def put(key, value):
-    logging.debug('Put request for pair [{}, {}]'.format(key, value))
-    cache.ping()
-    if cache.exists(key):
-        cache.set(key, value)
-        return True
-    cache.set(key, value)
-    return False
+class KeyValueStorage:
+    def __init__(self, cache, db):
+        self.cache = cache
+        self.db = db
+
+    def put(self, key, value):
+        logging.debug('Put request for pair [{}, {}]'.format(key, value))
+        self.cache.ping()
+        if self.cache.exists(key):
+            self.cache.set(key, value)
+            return True
+        self.cache.set(key, value)
+        return False
+
+    def get(self, key):
+        logging.debug('Get request for key [{}]'.format(key))
+        self.cache.ping()
+        if self.cache.exists(key):
+            return self.cache.get(key)
+        logging.warning('No data in cache, proceeding to the db')
+        val = self.db.find_one({'key' : key})
+        if val is None:
+            logging.error('No data in db')
+            return None
+        logging.debug('Found data in db')
+        self.cache.set(key, val['value'])
+        return val['value']
+
+    def delete(self, key):
+        logging.debug('Delete request for key [{}]'.format(key))
+        self.cache.ping()
+        if self.cache.exists(key):
+            logging.debug('Successful delete')
+            self.cache.delete(key)
+            return True
+        logging.error('Not such key in cache!')
+        return False
 
 
-def get(key):
-    logging.debug('Get request for key [{}]'.format(key))
-    cache.ping()
-    if cache.exists(key):
-        return cache.get(key)
-    logging.warning('No data in cache, proceeding to the db')
-    val = db.mongo_table.find_one({'key' : key})
-    if val is None:
-        logging.error('No data in db')
-        return None
-    logging.debug('Found data in db')
-    cache.set(key, val['value'])
-    return val['value']
-
-
-def delete(key):
-    logging.debug('Delete request for key [{}]'.format(key))
-    cache.ping()
-    if cache.exists(key):
-        logging.debug('Successful delete')
-        cache.delete(key)
-        return True
-    logging.error('Not such key in cache!')
-    return False
+kvs = KeyValueStorage(cache, db)
 
 
 @app.route('/')
@@ -72,18 +78,18 @@ def handle():
             logging.error('Incorrect request: {}'.format(flask.request.query_string))
             return flask.render_template('test.html', message = json.dumps({'status' : 'BAD_REQUEST'}))
         if action == 'GET':
-            value = get(key)
+            value = kvs.get(key)
             if value is None:
                 return flask.render_template('test.html', message = json.dumps({'status' : 'NOT_FOUND'}))
             else:
                 return flask.render_template('test.html', message = json.dumps({'status' : 'OK', 'message' : str(value)}))
         if action == 'PUT':
-            if put(key, str(message)):
+            if kvs.put(key, str(message)):
                 return flask.render_template('test.html', message = json.dumps({'status' : 'OVERWRITTEN'}))
             else:
                 return flask.render_template('test.html', message = json.dumps({'status' : 'CREATED'}))
         if action == 'DELETE':
-            if delete(key):
+            if kvs.delete(key):
                 return flask.render_template('test.html', message = json.dumps({'status' : 'DELETED'}))
             else:
                 return flask.render_template('test.html', message = json.dumps({'status' : 'NOT_FOUND'}))
