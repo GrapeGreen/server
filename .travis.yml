@@ -9,7 +9,7 @@ script:
 after_success:
   - if [[ "$TRAVIS_BRANCH" == "master" ]]; then
       echo $DOCKER_PASSWORD | docker login -u "$DOCKER_USERNAME" --password-stdin;
-      docker-compose up --build;
+      docker-compose build;
       docker tag server_server:latest "$DOCKER_USERNAME"/server:latest;
       docker push "$DOCKER_USERNAME"/server:latest;
       make push-image ;
