@@ -18,11 +18,9 @@ db = database['csc']
 
 
 def validate_request(action, key, message):
-    if action is None or action not in ['GET', 'PUT', 'DELETE']:
-        return False
     if key is None or type(key) != str:
         return False
-    if action == 'PUT' and message is None:
+    if action == 'POST' and message is None:
         return False
     return True
 
@@ -69,36 +67,56 @@ class KeyValueStorage:
 kvs = KeyValueStorage(cache, db)
 
 
-@app.route('/')
-def handle():
+@app.route('/', methods = ['GET'])
+def handle_get():
     try:
-        action, key, message = [flask.request.args.get(x) for x in ['method', 'key', 'message']]
-        logging.info('Incoming request with action = {}, key = {}, message = {}'.format(action, key, message))
-        if not validate_request(action, key, message):
-            logging.error('Incorrect request: {}'.format(flask.request.query_string))
-            return flask.render_template('test.html', message = json.dumps({'status' : 'BAD_REQUEST'}))
-        if action == 'GET':
-            value = kvs.get(key)
-            if value is None:
-                return flask.render_template('test.html', message = json.dumps({'status' : 'NOT_FOUND'}))
-            else:
-                return flask.render_template('test.html', message = json.dumps({'status' : 'OK', 'message' : str(value)}))
-        if action == 'PUT':
-            if kvs.put(key, str(message)):
-                return flask.render_template('test.html', message = json.dumps({'status' : 'OVERWRITTEN'}))
-            else:
-                return flask.render_template('test.html', message = json.dumps({'status' : 'CREATED'}))
-        if action == 'DELETE':
-            if kvs.delete(key):
-                return flask.render_template('test.html', message = json.dumps({'status' : 'DELETED'}))
-            else:
-                return flask.render_template('test.html', message = json.dumps({'status' : 'NOT_FOUND'}))
+        key, message = [flask.request.args.get(x) for x in ['key', 'message']]
+        if not validate_request('GET', key, message):
+            return flask.render_template('test.html', message = json.dumps({'status' : 'BAD_REQUEST'})), 400
+        value = kvs.get(key)
+        if value is None:
+            return flask.render_template('test.html', message = json.dumps({'status' : 'NOT_FOUND'})), 404
+        else:
+            return flask.render_template('test.html', message = json.dumps({'status' : 'OK', 'message' : str(value)})), 200
     except KeyboardInterrupt:
         exit(0)
     except:
-        logging.error('Something went wrong')
         traceback.print_exc()
-        return flask.render_template('test.html', message = json.dumps({'status' : 'INTERNAL_ERROR'}))
+        return flask.render_template('test.html', message = json.dumps({'status' : 'INTERNAL_ERROR'})), 500
+
+
+@app.route('/', methods = ['POST'])
+def handle_post():
+    try:
+        key, message = [flask.request.args.get(x) for x in ['key', 'message']]
+        if not validate_request('POST', key, message):
+            return flask.render_template('test.html', message = json.dumps({'status' : 'BAD_REQUEST'})), 400
+        if kvs.put(key, str(message)):
+            return flask.render_template('test.html', message = json.dumps({'status' : 'OVERWRITTEN'})), 200
+        else:
+            return flask.render_template('test.html', message = json.dumps({'status' : 'CREATED'})), 200
+    except KeyboardInterrupt:
+        exit(0)
+    except:
+        traceback.print_exc()
+        return flask.render_template('test.html', message = json.dumps({'status' : 'INTERNAL_ERROR'})), 500
+
+
+@app.route('/', methods = ['DELETE'])
+def handle_delete():
+    try:
+        key, message = [flask.request.args.get(x) for x in ['key', 'message']]
+        if not validate_request('DELETE', key, message):
+            return flask.render_template('test.html', message = json.dumps({'status' : 'BAD_REQUEST'})), 400
+        if kvs.delete(key):
+            return flask.render_template('test.html', message = json.dumps({'status' : 'DELETED'})), 200
+        else:
+            return flask.render_template('test.html', message = json.dumps({'status' : 'NOT_FOUND'})), 404
+    except KeyboardInterrupt:
+        exit(0)
+    except:
+        traceback.print_exc()
+        return flask.render_template('test.html', message = json.dumps({'status' : 'INTERNAL_ERROR'})), 500
 
 
 if __name__ == '__main__':
