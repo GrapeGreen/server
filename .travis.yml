@@ -1,6 +1,18 @@
 language: python
 python:
   - "3.7.4"
+services: docker
 cache: pip
 install: "pip install -r requirements.txt"
-script: "python server_test.py"
+script:
+  - "python server_test.py"
+after_success:
+  - if [[ "$TRAVIS_BRANCH" == "master" ]]; then
+      docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD";
+      docker-compose up --build;
+      docker tag server_server:latest "$DOCKER_USERNAME"/server:latest;
+      docker push "$DOCKER_USERNAME"/server:latest;
+      make push-image ;
+    fi
+notifications:
+  email: false
