@@ -8,7 +8,7 @@ script:
   - "python server_test.py"
 after_success:
   - if [[ "$TRAVIS_BRANCH" == "master" ]]; then
-      docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD";
+      echo $DOCKER_PASSWORD | docker login -u "$DOCKER_USERNAME" --password-stdin;
       docker-compose up --build;
       docker tag server_server:latest "$DOCKER_USERNAME"/server:latest;
       docker push "$DOCKER_USERNAME"/server:latest;
