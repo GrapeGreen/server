@@ -8,7 +8,7 @@ script:
   - "python server_test.py"
 after_success:
   - if [[ "$TRAVIS_BRANCH" == "master" ]]; then
-      echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin;
+      echo $DOCKER_PASSWORD | docker login docker.io -u $DOCKER_USERNAME --password-stdin;
       docker-compose build;
       docker tag server_server:latest "graperino/server:latest";
       docker push "graperino/server:latest";
